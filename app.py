@@ -262,8 +262,14 @@ with tab1:
         acc = (y_pred == y_test).mean()
         m1.metric("Accuracy", f"{acc:.1%}")
         if task_key != 'product':
-            auc = roc_auc_score(y_test, y_prob[:,1])
-            m2.metric("AUC-ROC", f"{auc:.3f}")
+            try:
+                if y_prob.shape[1] == 2:
+                    auc = roc_auc_score(y_test, y_prob[:,1])
+                else:
+                    auc = roc_auc_score(y_test, y_prob, multi_class='ovr', average='macro')
+                m2.metric("AUC-ROC", f"{auc:.3f}")
+            except Exception:
+                m2.metric("AUC-ROC", "N/A")
         recall = (y_pred[y_test==1] == y_test[y_test==1]).mean() if (y_test==1).sum() > 0 else 0
         m3.metric("Recall (Positive)", f"{recall:.1%}")
         precision_pos = (y_test[y_pred==1]==1).mean() if (y_pred==1).sum() > 0 else 0
@@ -620,10 +626,17 @@ with tab4:
         with col_ra:
             st.subheader("Actual vs Predicted")
             scatter_df = pd.DataFrame({'Actual':yr_test.values, 'Predicted':yr_pred})
-            fig_av = px.scatter(scatter_df.sample(min(400,len(scatter_df))),
-                                x='Actual', y='Predicted',
-                                trendline='ols',
+            # trendline='ols' requires statsmodels — draw manually instead
+            sample_df = scatter_df.sample(min(400,len(scatter_df)), random_state=42)
+            fig_av = px.scatter(sample_df, x='Actual', y='Predicted',
                                 color_discrete_sequence=[BLUE])
+            # add OLS trendline manually via numpy
+            _x = sample_df['Actual'].values
+            _y = sample_df['Predicted'].values
+            _m, _b = np.polyfit(_x, _y, 1)
+            fig_av.add_scatter(x=sorted(_x), y=[_m*v+_b for v in sorted(_x)],
+                               mode='lines', line=dict(color=ORANGE, width=2),
+                               name='Trend', showlegend=False)
             max_val = max(scatter_df['Actual'].max(), scatter_df['Predicted'].max())
             fig_av.add_shape(type='line', x0=0, y0=0, x1=max_val, y1=max_val,
                              line=dict(color=RED, dash='dash'))
