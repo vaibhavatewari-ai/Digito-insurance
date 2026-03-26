@@ -53,7 +53,11 @@ PALETTE = [BLUE, ORANGE, GREEN, GOLD, RED, '#7B2C8B']
 # ── Load Data ─────────────────────────────────────────────────────────────────
 @st.cache_data
 def load_data():
-    df = pd.read_csv('/home/claude/digital_insurance_survey.csv')
+    import os
+    # Works locally AND on Streamlit Cloud — CSV must be in same folder as app.py
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    csv_path = os.path.join(base_dir, 'digital_insurance_survey.csv')
+    df = pd.read_csv(csv_path)
     return df
 
 df = load_data()
