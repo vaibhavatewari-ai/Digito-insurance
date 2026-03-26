@@ -269,11 +269,15 @@ with tab1:
                     auc = roc_auc_score(y_test, y_prob, multi_class='ovr', average='macro')
                 m2.metric("AUC-ROC", f"{auc:.3f}")
             except Exception:
-                m2.metric("AUC-ROC", "N/A")
-        recall = (y_pred[y_test==1] == y_test[y_test==1]).mean() if (y_test==1).sum() > 0 else 0
-        m3.metric("Recall (Positive)", f"{recall:.1%}")
-        precision_pos = (y_test[y_pred==1]==1).mean() if (y_pred==1).sum() > 0 else 0
-        m4.metric("Precision (Positive)", f"{precision_pos:.1%}")
+                m2.metric("AUC-ROC", "—")
+        try:
+            recall = (y_pred[y_test==1] == y_test[y_test==1]).mean() if (y_test==1).sum() > 0 else 0
+            m3.metric("Recall (Positive)", f"{recall:.1%}")
+            precision_pos = (y_test[y_pred==1]==1).mean() if (y_pred==1).sum() > 0 else 0
+            m4.metric("Precision (Positive)", f"{precision_pos:.1%}")
+        except Exception:
+            m3.metric("Recall", "—")
+            m4.metric("Precision", "—")
 
         col_a, col_b = st.columns(2)
 
@@ -285,9 +289,11 @@ with tab1:
                 fig_cm = px.imshow(cm, text_auto=True, color_continuous_scale='Blues',
                                    labels=dict(x='Predicted',y='Actual'))
             else:
-                cm = confusion_matrix(y_test, y_pred)
+                # Derive labels dynamically — never hardcode ['No','Yes']
+                bin_labels = [str(l) for l in sorted(set(y_test) | set(y_pred))]
+                cm = confusion_matrix(y_test, y_pred, labels=sorted(set(y_test)|set(y_pred)))
                 fig_cm = px.imshow(cm, text_auto=True, color_continuous_scale='Blues',
-                                   x=['No','Yes'], y=['No','Yes'],
+                                   x=bin_labels, y=bin_labels,
                                    labels=dict(x='Predicted',y='Actual'))
             fig_cm.update_layout(height=340, margin=dict(t=20,b=20,l=20,r=20))
             st.plotly_chart(fig_cm, use_container_width=True)
